@@ -7,12 +7,25 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { analyzeCodebase } from '../src/analyzer.js';
 
-// Configure dotenv to load from the project root
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const envPath = path.resolve(__dirname, '..', '.env');
+// Configure dotenv to load from the current working directory
+const envPath = path.resolve(process.cwd(), '.env');
 
-dotenv.config({ path: envPath });
+console.log(`🔍 Looking for .env file at: ${envPath}`);
+
+// Check if .env file exists
+if (!fs.existsSync(envPath)) {
+  console.error(`❌ Error: .env file not found at: ${envPath}`);
+  console.info('💡 Please create a .env file in your project root with:\nGEMINI_API_KEY=your_actual_api_key_here');
+  process.exit(1);
+}
+
+try {
+  dotenv.config({ path: envPath });
+  console.log('✅ Loaded .env file');
+} catch (error) {
+  console.error('❌ Error loading .env file:', error.message);
+  process.exit(1);
+}
 
 const program = new Command();
 

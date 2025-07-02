@@ -1,35 +1,15 @@
 // @ts-check
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// Configure dotenv to load from the project root
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// Get the project root by going up one level from src directory
-const projectRoot = path.resolve(__dirname, '..');
-const envPath = path.join(projectRoot, '.env');
-
-console.log('🔍 Looking for .env file at:', envPath);
-
-// Debug: Check if .env file exists
-const fs = await import('fs');
-if (!fs.existsSync(envPath)) {
-  console.error('❌ Error: .env file not found at:', envPath);
-  console.log('💡 Please create a .env file in your project root with:');
+// Check if API key is available
+if (!process.env.GEMINI_API_KEY) {
+  console.error('❌ GEMINI_API_KEY is not defined in environment variables');
+  console.log('💡 Please make sure you have a .env file in your project root with:');
   console.log('GEMINI_API_KEY=your_actual_api_key_here');
   process.exit(1);
 }
 
-// Load environment variables
-try {
-  dotenv.config({ path: envPath });
-  console.log('✅ Loaded .env file from:', envPath);
-} catch (error) {
-  console.error('❌ Error loading .env file:', error.message);
-  process.exit(1);
-}
+console.log('🔑 Found GEMINI_API_KEY in environment variables');
 
 // Get and validate API key
 const apiKey = process.env.GEMINI_API_KEY;
