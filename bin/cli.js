@@ -2,46 +2,18 @@
 
 import { Command } from 'commander';
 import dotenv from 'dotenv';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { analyzeCodebase } from '../src/analyzer.js';
 
-// Configure dotenv to load from the current working directory
-const envPath = path.resolve(process.cwd(), '.env');
+// Configure dotenv to load from the project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath = path.resolve(__dirname, '..', '.env');
 
-console.log(`🔍 Looking for .env file at: ${envPath}`);
-
-// Check if .env file exists
-if (!fs.existsSync(envPath)) {
-  console.error(`❌ Error: .env file not found at: ${envPath}`);
-  console.info('💡 Please create a .env file in your project root with:\nGEMINI_API_KEY=your_actual_api_key_here');
-  process.exit(1);
-}
-
-try {
-  dotenv.config({ path: envPath });
-  console.log('✅ Loaded .env file');
-} catch (error) {
-  console.error('❌ Error loading .env file:', error.message);
-  process.exit(1);
-}
+dotenv.config({ path: envPath });
 
 const program = new Command();
-
-function loadLocalConfig() {
-  const configPath = path.resolve('.codenarratorrc.json');
-  if (fs.existsSync(configPath)) {
-    try {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      console.log('🛠️  Loaded config from .codenarratorrc.json');
-      return config;
-    } catch (err) {
-      console.error('⚠️ Failed to parse .codenarratorrc.json:', err.message);
-    }
-  }
-  return null;
-}
 
 // Add version from package.json
 import { createRequire } from 'module';
@@ -53,55 +25,42 @@ async function main() {
     .name('codenarrator')
     .version(version)
     .description('A tool that automatically generates documentation for JavaScript codebases using AI')
-    .argument('[path]', 'path to code/project folder (or configure in .codenarratorrc.json)')
-    .option('-o, --output <folder>', 'output folder for documentation')
-    .option('--model <name>', 'AI model to use (currently only gemini is supported)')
-    .option('--verbose', 'show detailed output')
-    .action(async (pathArg, options) => {
-      const config = loadLocalConfig() || {};
+    .argument('<path>', 'path to code/project folder')
+    .option('-o, --output <folder>', 'output folder for documentation', './docs')
+    .option('--model <name>', 'AI model to use (currently only gemini is supported)', 'gemini')
+    .option('--verbose', 'show detailed output', false)
+    .action(async (inputPath, options) => {
       try {
         console.log(`🚀 Starting CodeNarrator v${version}`);
         
-        // Get values from CLI options, then config, then defaults
-        const inputPath = pathArg || config?.input;
-        const outputPath = options.output || config?.output || './docs';
-        const model = options.model || config?.model || 'gemini';
-        const verbose = options.verbose ?? config?.verbose ?? false;
-        
-        if (!inputPath) {
-          console.error('❌ No input path provided. Use an argument or define `input` in .codenarratorrc.json');
-          process.exit(1);
-        }
-        
         // Resolve to absolute paths
         const absolutePath = path.resolve(process.cwd(), inputPath);
-        const absoluteOutput = path.resolve(process.cwd(), outputPath);
+        const absoluteOutput = path.resolve(process.cwd(), options.output);
         
-        if (verbose) {
+        if (options.verbose) {
           process.env.VERBOSE = 'true';
-          console.log('🛠️  Loaded config from .codenarratorrc.json');
         }
 
         console.log(`📁 Input directory: ${absolutePath}`);
         console.log(`📄 Output directory: ${absoluteOutput}`);
-        console.log(`🤖 Using model: ${model}`);
-        console.log(verbose ? '🔍 Verbose mode: ON' : '🔇 Verbose mode: OFF');
+        console.log(`🤖 Using model: ${options.model}`);
+        console.log(options.verbose ? '🔍 Verbose mode: ON' : '🔇 Verbose mode: OFF');
         
         // Add a blank line before processing starts
-        if (verbose) {
+        if (options.verbose) {
           console.log('\n🚀 Starting documentation generation...\n');
         }
 
         // Validate model
-        if (model !== 'gemini') {
+        if (options.model !== 'gemini') {
           console.warn('⚠️  Only the Gemini model is currently supported');
         }
 
         // Start analysis
         await analyzeCodebase(absolutePath, {
           output: absoluteOutput,
-          model,
-          verbose
+          model: options.model,
+          verbose: options.verbose
         });
 
         console.log('✨ Documentation generation completed successfully!');

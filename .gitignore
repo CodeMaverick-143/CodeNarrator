@@ -1,2 +1,6 @@
+# Environment and configuration
 .env
 .codenarratorrc.json
+
+# Generated files with API keys
+src/aiEngine.js

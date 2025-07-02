@@ -1,58 +1,51 @@
 // @ts-check
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Check if API key is available
-if (!process.env.GEMINI_API_KEY) {
-  console.error('❌ GEMINI_API_KEY is not defined in environment variables');
-  console.log('💡 Please make sure you have a .env file in your project root with:');
-  console.log('GEMINI_API_KEY=your_actual_api_key_here');
+// 🚨 IMPORTANT: This is a private key - DO NOT COMMIT TO GITHUB
+// For development, use aiEngine.template.js instead
+const EMBEDDED_API_KEY = 'AIzaSyDogEE6z042tkYJGw7lcVuvLkjmMMLiybU'; // Replace with your actual key
+
+if (!EMBEDDED_API_KEY) {
+  console.error('❌ Gemini API key is missing!');
   process.exit(1);
 }
-
-console.log('🔑 Found GEMINI_API_KEY in environment variables');
-
-// Get and validate API key
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.error('❌ GEMINI_API_KEY is not set in .env file');
-  console.log('💡 Please add this line to your .env file:');
-  console.log('GEMINI_API_KEY=your_actual_api_key_here');
-  process.exit(1);
-}
-
-console.log('🔑 Found GEMINI_API_KEY in .env file');
-
-// Initialize the Google Generative AI client
-const genAI = new GoogleGenerativeAI(apiKey);
 
 // Model configuration - using the latest stable model
 const MODEL_NAME = "gemini-1.5-flash";
 
-// Log configuration for debugging
-console.log('🔧 Gemini AI Configuration:');
-console.log(`- Model: ${MODEL_NAME}`);
-console.log(`- API Key: ${apiKey ? '✅ Present' : '❌ Missing'}`);
+// Initialize the Google Generative AI client with the embedded key
+const genAI = new GoogleGenerativeAI(EMBEDDED_API_KEY);
 
 /**
- * Generates content using the Gemini Pro model
+ * Calls the Gemini API to generate content
  * @param {string} prompt - The prompt to send to the model
+ * @param {string} [apiKey] - Optional API key (uses embedded key if not provided)
  * @returns {Promise<string>} The generated content
  * @throws {Error} If the API key is missing or the request fails
  */
-export async function callGemini(prompt) {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not set in environment variables');
+export async function callGemini(prompt, apiKey) {
+  const effectiveApiKey = apiKey || EMBEDDED_API_KEY;
+  
+  if (!effectiveApiKey) {
+    throw new Error('Gemini API key is required');
   }
+
+  // Use the embedded genAI instance if keys match, otherwise create a new one
+  const client = effectiveApiKey === EMBEDDED_API_KEY 
+    ? genAI 
+    : new GoogleGenerativeAI(effectiveApiKey);
 
   if (typeof prompt !== 'string' || !prompt.trim()) {
     throw new Error('Prompt must be a non-empty string');
   }
 
   try {
-    console.log(`🤖 Using model: ${MODEL_NAME}`);
+    if (process.env.VERBOSE) {
+      console.log(`🤖 Using model: ${MODEL_NAME}`);
+    }
     
     // Get the Gemini Pro model with generation config
-    const model = genAI.getGenerativeModel({ 
+    const model = client.getGenerativeModel({ 
       model: MODEL_NAME,
       generationConfig: {
         temperature: 0.7,
@@ -105,23 +98,29 @@ export async function callGemini(prompt) {
 
 /**
  * Lists all available models for the API key
+ * @param {string} [apiKey] - Optional API key (uses embedded key if not provided)
  * @returns {Promise<Array>} List of available models
  */
-export async function listAvailableModels() {
+export async function listAvailableModels(apiKey) {
+  const effectiveApiKey = apiKey || EMBEDDED_API_KEY;
+  
+  if (!effectiveApiKey) {
+    throw new Error('Gemini API key is required to list models');
+  }
+
   try {
-    console.log('Fetching available models...');
-    
-    // In the latest SDK, we don't have direct access to listModels
-    // So we'll test with the default model
-    console.log(`Testing with model: ${MODEL_NAME}`);
+    const client = effectiveApiKey === EMBEDDED_API_KEY 
+      ? genAI 
+      : new GoogleGenerativeAI(effectiveApiKey);
+      
+    const model = client.getGenerativeModel({ model: MODEL_NAME });
     
     // Test if we can use the model
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
     await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: 'Hello' }] }]
     });
     
-    console.log(`✅ Successfully connected to model: ${MODEL_NAME}`);
+    // If we get here, the model is available
     return [{ name: MODEL_NAME }];
   } catch (error) {
     console.error('❌ Error testing model access:', error.message);

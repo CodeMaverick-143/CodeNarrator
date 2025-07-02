@@ -89,7 +89,8 @@ File: ${relativePath}
 
 ${fileContent}`;
         
-        const documentation = await callGemini(prompt);
+        // API key is optional now as we have an embedded one
+        const documentation = await callGemini(prompt, options.apikey);
         const outputPath = await writeMarkdown(file, documentation, options.output);
         
         if (options.verbose) {
